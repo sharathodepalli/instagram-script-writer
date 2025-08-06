@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: instagram-script-writer
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "streamlit run src/app_intelligent.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: PINECONE_INDEX
+        value: scriptwriter-384
+      - key: PINECONE_HOST
+        sync: false
