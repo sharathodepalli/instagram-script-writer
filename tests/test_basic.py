@@ -8,6 +8,9 @@ import os
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
+# Set testing mode to skip environment variable validation
+os.environ['TESTING_MODE'] = '1'
+
 class TestBasicImports(unittest.TestCase):
     """Test that core modules can be imported"""
     

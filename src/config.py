@@ -30,15 +30,16 @@ PINECONE_TYPE: str = os.getenv("PINECONE_TYPE", "dense")
 PINECONE_CAPACITY_MODE: str = os.getenv("PINECONE_CAPACITY_MODE", "serverless")
 EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
-# Validation
-required_vars = {
-    "OPENAI_API_KEY": OPENAI_API_KEY,
-    "PINECONE_API_KEY": PINECONE_API_KEY,
-}
+# Validation (skip in test environment)
+if not os.getenv("TESTING_MODE"):
+    required_vars = {
+        "OPENAI_API_KEY": OPENAI_API_KEY,
+        "PINECONE_API_KEY": PINECONE_API_KEY,
+    }
 
-missing_vars = [var for var, value in required_vars.items() if not value]
-if missing_vars:
-    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+    missing_vars = [var for var, value in required_vars.items() if not value]
+    if missing_vars:
+        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 # Telugu Scraper Configuration
 INSTA_USERNAME: Optional[str] = os.getenv("INSTA_USERNAME")
