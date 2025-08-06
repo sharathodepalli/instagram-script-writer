@@ -30,8 +30,8 @@ PINECONE_TYPE: str = os.getenv("PINECONE_TYPE", "dense")
 PINECONE_CAPACITY_MODE: str = os.getenv("PINECONE_CAPACITY_MODE", "serverless")
 EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
-# Validation (skip in test environment)
-if not os.getenv("TESTING_MODE"):
+# Validation (skip in test/production environments)
+if not os.getenv("TESTING_MODE") and not os.getenv("PRODUCTION_MODE"):
     required_vars = {
         "OPENAI_API_KEY": OPENAI_API_KEY,
         "PINECONE_API_KEY": PINECONE_API_KEY,
