@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  scriptwriter:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8501:8501"
+    environment:
+      # AI/ML API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
+      
+      # Pinecone Configuration
+      - PINECONE_INDEX=${PINECONE_INDEX:-scriptwriter-prod}
+      - PINECONE_HOST=${PINECONE_HOST}
+      
+      # LangSmith Configuration  
+      - LANGCHAIN_TRACING_V2=true
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-Instagram-Script-Writer-Prod}
+      
+      # Application Configuration
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      
+    volumes:
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Redis for caching (uncomment if needed)
+  # redis:
+  #   image: redis:6-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+
+networks:
+  default:
+    name: scriptwriter-network

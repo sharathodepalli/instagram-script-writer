@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Run weekly on Sunday at midnight
+    - cron: "0 0 * * 0"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 black pytest-cov
+
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 src tests --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 src tests --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+
+      - name: Format check with black
+        run: |
+          black --check src tests
+
+      - name: Run unit tests
+        run: |
+          pytest tests/ --cov=src --cov-report=xml --cov-report=term-missing -v --ignore=tests/test_integration.py
+
+      - name: Run integration tests
+        run: |
+          pytest tests/test_integration.py -v
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_HOST: ${{ secrets.PINECONE_HOST }}
+          PINECONE_INDEX: ${{ secrets.PINECONE_INDEX }}
+          PINECONE_METRIC: cosine
+          PINECONE_DIMENSIONS: 1024
+          PINECONE_CLOUD: aws
+          PINECONE_REGION: ${{ secrets.PINECONE_REGION }}
+          PINECONE_TYPE: dense
+          PINECONE_CAPACITY_MODE: serverless
+          EMBEDDING_MODEL: ${{ secrets.EMBEDDING_MODEL || 'llama-text-embed-v2' }}
+          MODEL_FINE_TUNED: ${{ secrets.MODEL_FINE_TUNED }}
+
+      - name: Smoke test Telugu scraper
+        run: |
+          mkdir -p data/raw_reels/Telugu scripts/auto_telugu
+          # Run with minimal fetch to test imports and basic functionality
+          python -c "import sys; from src.scraper.config import ensure_directories; ensure_directories(); from src.scraper.scraper import ReelScraper; from src.scraper.processor import ReelProcessor; print('Telugu scraper modules loaded successfully')"
+        env:
+          INSTA_USERNAME: ${{ secrets.INSTA_USERNAME || '' }}
+          INSTA_PASSWORD: ${{ secrets.INSTA_PASSWORD || '' }}
+          TARGET_HASHTAG: Telugu
+          MAX_FETCH: 1
+          RAW_DIR: data/raw_reels
+          TOP_CSV: data/top_reels.csv
+          SCRIPT_DIR: scripts/auto_telugu
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t instagram-script-writer:${{ github.sha }} .
+          docker build -t instagram-script-writer:latest .
+
+      - name: Test Docker image
+        run: |
+          docker run --rm instagram-script-writer:latest python -c "import src.config; print('Docker build successful')"
